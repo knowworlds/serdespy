@@ -64,3 +64,18 @@ That solves the page's default link (28 dB loss, TX FFE on, CTLE auto, FFE, 1.5 
 python src/112g_pam4/plot_eye.py --loss 42 --dsp dfe --xt-mv 2.1 --rx-noise-mv 0.6 -o eye_long.png
 python src/112g_pam4/plot_eye.py --loss 12 --echo 0.85 --dsp dfe -o eye_echo.png
 ```
+
+### Error attribution from ADC codes
+
+`src/112g_pam4/attribution/` estimates where the link's error comes from using only the ADC output codes plus the known channel and receiver. The simulator adds TX DAC 4-way interleave mismatch (offset, gain, edge timing), DAC THD (a2, a3), TX edge RJ, residual PJ, RX input noise, ADC 8-way interleave mismatch and ADC noise. The analyzer then does the following:
+
+1. Syncs to PRBS13Q from the codes and detects Gray mapping by checking the LFSR recurrence.
+2. Fits the deterministic impairments jointly over four captures, each with one known setting changed (DAC lane phase, CTLE, TX FFE), using Gauss–Newton on the exact forward model.
+3. Fits the noise variances from residual auto-products and computes block-sandwich standard errors.
+4. Ranks sources by their mean-square error after the FFE. Ablation simulations give the true shares for comparison.
+
+```bash
+python src/112g_pam4/attribution/run_attribution.py --media out/ --mc 8
+```
+
+It prints the ranking, the parameter table with z = (estimate − truth) / standard error, and the single-capture aliases that the joint fit resolves. It also writes the ranking, per-lane, parameter, code-density, identifiability and Monte Carlo plots.
